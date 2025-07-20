@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    .maincontainer{
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    .action_btn_wrap{
+      display: flex;
+      flex-direction: row;
+    }
+    .action_btn{
+      min-height: 6vw;
+      min-width: 6vw;
+      color: white;
+      padding: 1%;
+      font-size: 2vw;
+      text-align: center;
+      border-radius: 5%;
+      margin-right: 8%;
+      margin-top: 5%;
+      margin-left: 0%;
+    }
+  </style>
+
+
+
+
+</head>
+<body>
+  <div class="maincontainer">
+    <h3 style="padding: 0%;">Patterns you make here are visible to me on my led matrix, Draw What ever u like</h1>
+     <div class="ledmatrix" id="ledmatrix"></div>
+     <div class="action_btn_wrap">
+      <button class="action_btn" onclick="reset_ledStates()">Reset</button>
+      <button class="action_btn" onclick="submitData()">Post</button>
+     </div>
+    
+  </div>
+ 
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+  <script>
+    let host = "31d09ce8b7fa4a92aafc62ae06187541.s1.eu.hivemq.cloud";
+    let port = 8883;
+    let clientId=Math.random();
+    const ledmatrix=document.getElementById("ledmatrix");
+    ledmatrix.style.height= "30vw";
+    ledmatrix.style.width="30vw";
+    ledmatrix.style.display= "grid";
+    ledmatrix.style.gridTemplateColumns = "repeat(8,12.5%)";
+    ledmatrix.style.gridTemplateRows="repeat(8,12.5%)";
+    ledmatrix.style.backgroundColor= "gray";
+    ledmatrix.style.gridGap="0%";
+    ledmatrix.style.border="2px solid white";
+    const ledStates = Array(8).fill(null).map(() => Array(8).fill(false));
+    for (let r=0;r<8;r++){
+      for(let c=0;c<8;c++){
+        const red_led=document.createElement("button");
+        
+        red_led.style.width="90%";
+        red_led.style.height="90%";
+        red_led.style.border="2px solid white";
+        red_led.style.borderRadius="100%";
+        red_led.dataset.row=r;
+        red_led.dataset.col=c;
+        ledmatrix.appendChild(red_led);
+        red_led.addEventListener('click',(event)=>{
+
+          const row=event.target.dataset.row;
+          const col=event.target.dataset.col;
+          console.log(`Current row ${row} Current col ${col}`);
+          ledStates[row][col]=!ledStates[row][col];
+          event.target.style.backgroundColor=ledStates[row][col]? "red":"gray";
+          console.log(ledStates);
+
+        });
+
+        
+      }
+    }
+    function reset_ledStates(){
+      for(let r=0;r<8;r++){
+        for(let c=0;c<8;c++){
+          ledStates[r][c]=false;
+          const btn = document.querySelector(`button[data-row="${r}"][data-col="${c}"]`);
+          btn.style.backgroundColor = "gray";
+        }
+      }
+      
+    }
+    
+    
+    const client = mqtt.connect(`wss://${host}:8884/mqtt`, {
+    clientId: 'led-matrix-' + Math.random().toString(16).substr(2, 8),
+    username: "SnapTexas",
+    password: "00HelloWorld00",
+    keepalive:60
+    
+  });
+  client.on('connect', () => {
+    alert('Connected to broker');});
+  client.on('error', (err) => {
+    console.error('MQTT Error:', err);
+  });
+    
+    function submitData() {
+    let bytes = [];
+    for (let r = 0; r < 8; r++) {
+      let byte = "";
+      for (let c = 0; c < 8; c++) {
+        byte += ledStates[r][c] ? "1" : "0";
+      }
+      bytes.push(byte);
+    }
+
+    const dataStr = JSON.stringify({ matrix: bytes });
+
+    client.publish('matrix/data', dataStr);
+    alert("Pattern was sent ");
+
+    reset_ledStates(); // optional
+  }
+    //ledmatrix.appendChild(red_led);
+    
+
+    
+  </script>
+</body>
+</html>
